@@ -2,19 +2,17 @@
  * phantomjs rasteriser server
  *
  * Usage:
- *   phantomjs rasterizer.js [basePath] [port] [defaultViewportSize]
+ *   phantomjs rasterizer.js [basePath] [port] [format] [orientation]
  *
  * This starts an HTTP server waiting for screenshot requests
  */
-var basePath = phantom.args[0] || '/tmp/'; 
+var basePath = phantom.args[0] || '/tmp/';
 
 var port  = phantom.args[1] || 3001;
 
-var defaultViewportSize = phantom.args[2] || '';
-defaultViewportSize = defaultViewportSize.split('x');
-defaultViewportSize = {
-  width: ~~defaultViewportSize[0] || 1024,
-  height: ~~defaultViewportSize[1] || 600
+var defaultPaperSize = {
+  format: phantom.args[2] || "Letter",
+  orientation: phantom.args[3] || "portrait"
 };
 
 var pageSettings = ['javascriptEnabled', 'loadImages', 'localToRemoteUrlAccessEnabled', 'userAgent', 'userName', 'password'];
@@ -49,7 +47,7 @@ server = require('webserver').create();
  * All settings of the WebPage object can also be set using headers, e.g.:
  * javascriptEnabled: false
  * userAgent: Mozilla/5.0 (iPhone; U; CPU like Mac OS X; en) AppleWebKit/420+
- */ 
+ */
 service = server.listen(port, function(request, response) {
   if (request.url == '/healthCheck') {
     response.statusCode = 200;
@@ -64,14 +62,17 @@ service = server.listen(port, function(request, response) {
     return;
   }
   var url = request.headers.url;
-  var path = basePath + (request.headers.filename || (url.replace(new RegExp('https?://'), '').replace(/\//g, '.') + '.png'));
+  var path = basePath + (request.headers.filename || (url.replace(new RegExp('https?://'), '').replace(/\//g, '.') + '.pdf'));
   var page = new WebPage();
   var delay = request.headers.delay || 0;
   try {
-    page.viewportSize = {
-      width: request.headers.width || defaultViewportSize.width,
-      height: request.headers.height || defaultViewportSize.height
-    };
+    page.paperSize = {
+        format: request.headers.format || defaultPaperSize.format,
+        orientation: request.headers.orientation || defaultPaperSize.orientation
+    }
+
+    page.settings.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.57 Safari/537.17';
+
     if (request.headers.clipRect) {
       page.clipRect = JSON.parse(request.headers.clipRect);
     }

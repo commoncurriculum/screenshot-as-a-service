@@ -3,6 +3,7 @@ var join = require('path').join;
 var fs = require('fs');
 var path = require('path');
 var request = require('request');
+var config = require('config');
 
 module.exports = function(app, useCors) {
   var rasterizerService = app.settings.rasterizerService;
@@ -24,8 +25,11 @@ module.exports = function(app, useCors) {
       if (req.param(name, false)) options.headers[name] = req.param(name);
     });
 
-    var filename = 'screenshot_' + utils.md5(url + JSON.stringify(options)) + '.png';
+    var filename = 'screenshot_' + utils.md5(url + JSON.stringify(options)) + '.pdf';
     options.headers.filename = filename;
+    options.headers.layout = req.param('layout') || config.rasterizer.layout;
+    options.headers.orientation = req.param('orientation') || config.rasterizer.orientation;
+    options.headers.border = req.param('border') || config.rasterizer.border;
 
     var filePath = join(rasterizerService.getPath(), filename);
 
@@ -36,6 +40,7 @@ module.exports = function(app, useCors) {
       processImageUsingCache(filePath, res, callbackUrl, function(err) { if (err) next(err); });
       return;
     }
+
     console.log('Request for %s - Rasterizing it', url);
     processImageUsingRasterizer(options, filePath, res, callbackUrl, function(err) { if(err) next(err); });
   });
